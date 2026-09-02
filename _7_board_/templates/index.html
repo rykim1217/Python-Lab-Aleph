@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flask RESTful Board | 커서 페이징 & JWT 인증</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <!-- Google Fonts (Noto Sans KR) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Noto Sans KR', sans-serif; }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #c7d2fe;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+
+  <!-- ================= HEADER / NAVBAR ================= -->
+  <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <a href="/" class="flex items-center space-x-3 group">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">
+            <i class="fa-solid fa-layer-group text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">Aleph Board</h1>
+            <p class="text-xs text-indigo-600 font-medium">RESTful & JWT Architecture</p>
+          </div>
+        </a>
+
+        <!-- Auth Navigation & Action Buttons -->
+        <div class="flex items-center space-x-3" id="nav-auth-section">
+          <!-- Populated by static/js/app.js -->
+          <div class="animate-pulse bg-slate-200 h-9 w-32 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+    <!-- Hero / Title Banner -->
+    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl">
+      <div class="relative z-10 max-w-2xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold uppercase tracking-wider mb-3 border border-indigo-500/30">
+          <i class="fa-solid fa-bolt text-yellow-400"></i> Cursor-based Pagination Active
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">
+          실시간 커뮤니티 게시판
+        </h2>
+        <p class="mt-2 text-slate-300 text-sm sm:text-base leading-relaxed">
+          Flask RESTful API, MySQL 8.0, JWT 토큰 인증과 고성능 커서 기반 페이징으로 구축되었습니다.
+        </p>
+      </div>
+      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    </div>
+
+    <!-- Search & Filter Control Bar -->
+    <div class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200 space-y-4">
+      <!-- Search Box & Filter Controls -->
+      <form id="search-form" class="flex flex-col md:flex-row gap-3">
+        <!-- Search Type Select -->
+        <div class="w-full md:w-36 flex-shrink-0">
+          <select id="search-type" class="w-full bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-xl focus:ring-indigo-500 focus:border-indigo-500 p-2.5 outline-none transition">
+            <option value="all">전체 검색</option>
+            <option value="title">제목</option>
+            <option value="content">내용</option>
+            <option value="author">작성자</option>
+          </select>
+        </div>
+
+        <!-- Search Keyword Input -->
+        <div class="relative flex-1">
+          <div class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </div>
+          <input type="text" id="search-input" placeholder="검색어를 입력하세요..." class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-slate-800" />
+          <button type="button" id="clear-search-btn" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Submit & Refresh Buttons -->
+        <div class="flex items-center gap-2">
+          <button type="submit" class="flex-1 md:flex-none px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition shadow-sm flex items-center justify-center gap-2">
+            <i class="fa-solid fa-search"></i> 검색
+          </button>
+          <button type="button" id="refresh-btn" title="새로고침" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition">
+            <i class="fa-solid fa-arrows-rotate"></i>
+          </button>
+        </div>
+      </form>
+
+      <!-- Category Filter Pills -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-1 custom-scrollbar text-sm" id="category-pills-container">
+        <!-- Dynamically injected category buttons -->
+        <button data-cat-id="" class="cat-pill active px-4 py-1.5 rounded-full font-medium transition whitespace-nowrap bg-indigo-600 text-white shadow-sm">
+          전체
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Search Filter Badge Indicator -->
+    <div id="filter-status-badge" class="hidden flex items-center justify-between bg-indigo-50 border border-indigo-100 text-indigo-800 text-xs px-4 py-2 rounded-xl">
+      <div class="flex items-center gap-2" id="filter-status-text">
+        <i class="fa-solid fa-filter"></i> 필터 적용 중
+      </div>
+      <button id="reset-filter-btn" class="text-indigo-600 hover:text-indigo-900 font-bold underline ml-2">초기화</button>
+    </div>
+
+    <!-- ================= POST LIST ================= -->
+    <div class="space-y-3" id="post-list-container">
+      <!-- Loading Skeleton (Initial state) -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 animate-pulse space-y-3">
+        <div class="h-4 bg-slate-200 rounded w-1/4"></div>
+        <div class="h-6 bg-slate-200 rounded w-3/4"></div>
+        <div class="h-4 bg-slate-100 rounded w-full"></div>
+      </div>
+    </div>
+
+    <!-- ================= LOAD MORE (CURSOR PAGINATION) ================= -->
+    <div class="text-center py-6" id="pagination-wrapper">
+      <button id="load-more-btn" class="hidden inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 text-indigo-600 border border-indigo-200 hover:border-indigo-300 font-semibold rounded-2xl shadow-sm transition transform active:scale-95">
+        <span>더 보기 (커서 다음 페이지)</span>
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+      </button>
+      <div id="loading-spinner" class="hidden py-4">
+        <i class="fa-solid fa-circle-notch fa-spin text-indigo-600 text-2xl"></i>
+        <p class="text-xs text-slate-500 mt-2">게시글을 불러오는 중입니다...</p>
+      </div>
+      <div id="end-of-posts" class="hidden text-slate-400 text-xs py-4">
+        <i class="fa-regular fa-circle-check mr-1"></i> 마지막 게시글입니다.
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+    <p>Flask + RESTful API + JWT + MySQL 8.0 Cursor Pagination Board</p>
+  </footer>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. Auth Modal (Login & Signup) -->
+  <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden transition-opacity">
+    <div class="bg-white w-full max-w-md mx-4 rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
+      <!-- Modal Header with Tabs -->
+      <div class="bg-slate-50 border-b border-slate-200 flex items-center justify-between px-6 pt-4">
+        <div class="flex space-x-6">
+          <button id="tab-login" class="pb-3 font-bold text-sm text-indigo-600 border-b-2 border-indigo-600 transition">로그인</button>
+          <button id="tab-signup" class="pb-3 font-medium text-sm text-slate-500 hover:text-slate-800 transition">회원가입</button>
+        </div>
+        <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 pb-3">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6">
+        <!-- Login Form -->
+        <form id="form-login" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">아이디 또는 이메일</label>
+            <input type="text" id="login-username" required placeholder="아이디를 입력하세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">비밀번호</label>
+            <input type="password" id="login-password" required placeholder="비밀번호를 입력하세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+          <div id="login-error-msg" class="text-xs text-red-500 font-medium hidden"></div>
+          <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-100 transition">
+            로그인
+          </button>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="form-signup" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">아이디 (3~30자)</label>
+            <input type="text" id="signup-username" required placeholder="사용할 아이디" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">이메일</label>
+            <input type="email" id="signup-email" required placeholder="example@domain.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">비밀번호 (6자 이상)</label>
+            <input type="password" id="signup-password" required placeholder="비밀번호를 입력하세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+          <div id="signup-error-msg" class="text-xs text-red-500 font-medium hidden"></div>
+          <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md shadow-indigo-100 transition">
+            가입하기
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Create / Edit Post Modal -->
+  <div id="post-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden transition-opacity">
+    <div class="bg-white w-full max-w-2xl mx-4 rounded-3xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all">
+      <div class="bg-slate-50 border-b border-slate-200 flex items-center justify-between px-6 py-4">
+        <h3 id="post-modal-title" class="font-bold text-slate-800 text-base">게시글 작성</h3>
+        <button onclick="closePostModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <form id="post-form" class="p-6 space-y-4">
+        <input type="hidden" id="post-id-input" value="" />
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-1">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">카테고리</label>
+            <select id="post-category-select" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-semibold text-slate-600 mb-1.5">제목</label>
+            <input type="text" id="post-title-input" required placeholder="글 제목을 입력하세요" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">본문 내용</label>
+          <textarea id="post-content-input" rows="8" required placeholder="게시글 내용을 자유롭게 작성하세요..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"></textarea>
+        </div>
+
+        <div id="post-error-msg" class="text-xs text-red-500 font-medium hidden"></div>
+
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" onclick="closePostModal()" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition">
+            취소
+          </button>
+          <button type="submit" id="post-submit-btn" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-md shadow-indigo-100 transition">
+            저장
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Post Detail Modal -->
+  <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden transition-opacity">
+    <div class="bg-white w-full max-w-3xl mx-4 rounded-3xl shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col overflow-hidden transform transition-all">
+      <!-- Detail Header -->
+      <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span id="detail-category-badge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700"></span>
+          <span class="text-xs text-slate-400">#<span id="detail-id"></span></span>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Detail Body (Scrollable) -->
+      <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+        <h2 id="detail-title" class="text-xl sm:text-2xl font-bold text-slate-900 leading-snug"></h2>
+
+        <!-- Meta info -->
+        <div class="flex flex-wrap items-center justify-between text-xs text-slate-500 py-3 border-y border-slate-100 gap-2">
+          <div class="flex items-center space-x-2">
+            <div class="w-7 h-7 rounded-full bg-indigo-500 text-white flex items-center justify-center font-bold text-xs">
+              <i class="fa-solid fa-user"></i>
+            </div>
+            <span id="detail-author" class="font-medium text-slate-800"></span>
+            <span class="text-slate-300">•</span>
+            <span id="detail-date"></span>
+          </div>
+          <div class="flex items-center space-x-3 text-slate-400">
+            <span><i class="fa-regular fa-eye mr-1"></i><span id="detail-views">0</span></span>
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div id="detail-content" class="text-slate-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap py-4 min-h-[150px]"></div>
+      </div>
+
+      <!-- Detail Footer / Action Buttons -->
+      <div class="bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex items-center justify-between">
+        <button onclick="closeDetailModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition">
+          닫기
+        </button>
+        <!-- Author Edit/Delete Controls -->
+        <div id="detail-owner-actions" class="flex items-center space-x-2 hidden">
+          <button id="btn-edit-post" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-semibold text-xs rounded-xl transition">
+            <i class="fa-solid fa-pen-to-square mr-1"></i> 수정
+          </button>
+          <button id="btn-delete-post" class="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs rounded-xl transition">
+            <i class="fa-solid fa-trash-can mr-1"></i> 삭제
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- App Script -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
