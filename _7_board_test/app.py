@@ -163,9 +163,23 @@ def delete_post(id):
     
     return jsonify({"msg": "삭제되었습니다."})
 
+import os
+from dotenv import load_dotenv
 
+# 같은 폴더의 .env 를 읽어 환경변수로 올려 준다 (이 한 줄이 핵심)
+load_dotenv()
+
+# .env 파일에 정의한 변수 이름으로 키를 가져온다
+PUBLIC_API_KEY = os.environ.get("PUBLIC_API_KEY")
+
+# 키 값 자체는 절대 출력하지 않고 안전하게 확인
+if PUBLIC_API_KEY:
+    print("키 로드됨 — 앞 4자리:", PUBLIC_API_KEY[:4] + "****")
+    # 이후 불러온 key를 활용해 공공데이터 API 요청 로직 작성
+else:
+    print("키 없음 — 더미 실습 진행 또는 설정을 확인하세요.")
 # ----------------- 부산 테마여행 공공 데이터 연동 엔드포인트 -----------------
-PUBLIC_API_KEY = "aBOed7KLCeumvsZmU3K55z%2BkPrA83hCR82i%2F4i3qIftNHxwllJKhrwogcYAg%2FvYmGWa7pmudmYChqQBS1zN%2Fpw%3D%3D"
+
 PUBLIC_API_URL = "http://apis.data.go.kr/6260000/RecommendedService/getRecommendedKr"
 
 # 1) 외부 공공 API 데이터를 100건 받아와서 JSON으로 반환하는 백엔드 라우트
