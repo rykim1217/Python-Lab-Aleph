@@ -1,16 +1,16 @@
 import os
 import json
 import requests
+from pathlib import Path
 from dotenv import load_dotenv
 
-# 프로젝트 상위 폴더의 .env 불러오기
-load_dotenv("../.env")
+# alert_sender.py 위치를 기준으로 상위 폴더의 .env 불러오기
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR.parent / ".env")
 
-# 설정값
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 STUDENT = "김라연"
 
-# 환경변수가 없으면 전송하지 않고 종료
 if not N8N_WEBHOOK_URL:
     print("[오류] N8N_WEBHOOK_URL 환경변수가 설정되지 않았습니다.")
     raise SystemExit(1)
@@ -33,7 +33,6 @@ data = {
     "alerts": alerts
 }
 
-# A2 증적용: 실제 전송할 JSON 확인
 print("[전송 JSON]")
 print(json.dumps(data, ensure_ascii=False, indent=2))
 
@@ -43,7 +42,6 @@ try:
         json=data,
         timeout=5
     )
-
     print(f"[n8n] 전송 완료 -> {response.status_code}")
 
 except requests.RequestException as e:
