@@ -41,67 +41,67 @@ Python으로 로그인 경보 데이터를 만들어 n8n Webhook으로 전송하
 
 ### n8n Code 노드 판정 결과
 
-![Code 노드 출력](evidence/B1_B2_code_output_2items_level10_3.png)
+![Code 노드 출력](images/B1_B2_code_output_2items_level10_3.png)
 
 레벨 10과 레벨 3 경보에 대해 각각 `decision`, `severity`, `reason`이 생성되는 것을 확인했습니다.
 
 ### n8n 분기 실행
 
-![IF 노드 양쪽 실행](evidence/C1_IF_both_branches.png)
+![IF 노드 양쪽 실행](images/C1_IF_both_branches.png)
 
 거부와 허용 두 분기가 정상적으로 실행되는 것을 확인했습니다.
 
 ### Slack 알림
 
-![Slack 알림](evidence/C2_C5_slack_deny_allow.png)
+![Slack 알림](images/C2_C5_slack_deny_allow.png)
 
 거부와 허용 메시지가 서로 다른 형식으로 도착하는 것을 확인했습니다.
 
 ### Discord 알림
 
-![Discord 알림](evidence/C3_discord_deny_allow.png)
+![Discord 알림](images/C3_discord_deny_allow.png)
 
-![Discord Embed 색상](evidence/S3_discord_embeds_red_green.png)
+![Discord Embed 색상](images/S3_discord_embeds_red_green.png)
 
 Discord에서 거부/허용 결과가 Embed 카드와 색상으로 구분되는 것을 확인했습니다.
 
 ### Telegram 알림
 
-![Telegram 알림](evidence/C4_telegram_deny_allow.png)
+![Telegram 알림](images/C4_telegram_deny_allow.png)
 
 Telegram에 거부와 허용 알림이 도착하는 것을 확인했습니다.
 
 ### 게시판 REST API
 
-![REST API 테스트](evidence/D3_normal_post_201.png)
+![REST API 테스트](images/D3_normal_post_201.png)
 
 정상 요청에서 `201`과 반환된 `id`를 확인했습니다.
 
 ### MySQL 저장 결과
 
-![MySQL security_events](evidence/D4_mysql_security_events.png)
+![MySQL security_events](images/D4_mysql_security_events.png)
 
 `security_events` 테이블에 학생 이름과 `deny`/`allow` 결과가 저장되는 것을 확인했습니다.
 
 ### n8n 게시판 저장 실행
 
-![게시판 저장 성공](evidence/D6_n8n_allow_201.png)
+![게시판 저장 성공](images/D6_n8n_allow_201.png)
 
 n8n의 `게시판 저장` 노드에서 `201` 응답이 반환되는 것을 확인했습니다.
 
 ### 심화: 통계 조회
 
-![Summary API](evidence/S1_summary_api.png)
+![Summary API](images/S1_summary_api.png)
 
 학생별 허용/거부 건수와 거부 상위 IP를 조회했습니다.
 
 ### 심화: Windows 작업 스케줄러
 
-![5분 주기 설정](evidence/S4_trigger_every_5min.png)
+![5분 주기 설정](images/S4_trigger_every_5min.png)
 
-![alert_sender.py 실행 설정](evidence/S4_action_alert_sender.png)
+![alert_sender.py 실행 설정](images/S4_action_alert_sender.png)
 
-![작업 실행 성공](evidence/S4_task_run_success.png)
+![작업 실행 성공](images/S4_task_run_success.png)
 
 Windows 작업 스케줄러에서 5분 주기로 `alert_sender.py`가 실행되도록 설정하고 실행 성공을 확인했습니다.
 
