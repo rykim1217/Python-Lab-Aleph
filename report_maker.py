@@ -12,7 +12,7 @@ import requests  # pip install requests
 # 각자 본인 n8n 웹훅 주소를 넣으세요.
 # 환경변수 N8N_WEBHOOK_URL 이 설정돼 있으면 그 값을 우선 사용합니다.
 # WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "")   # ← 여기 또는 환경변수에
-WEBHOOK_URL = "http://localhost:5678/webhook-test/ed9b49fc-74c9-4043-b631-1e32c0121bd2"
+WEBHOOK_URL = "http://localhost:5678/webhook/239b13a9-e1ad-4846-964a-af0c3ba47dd1"
 
 BASE_DIR = Path(__file__).resolve().parent       # 스크립트가 있는 폴더 기준
 REPORT_PATH = BASE_DIR / "report.md"
