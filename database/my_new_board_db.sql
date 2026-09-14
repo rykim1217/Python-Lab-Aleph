@@ -21,7 +21,7 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 -- GTID state at the beginning of the backup 
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'ed8a6684-a598-11f1-aef4-ba2d36b1aab5:1-76';
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'ed8a6684-a598-11f1-aef4-ba2d36b1aab5:1-85';
 
 --
 -- Table structure for table `posts`
@@ -99,10 +99,13 @@ CREATE TABLE `users` (
   `id` int NOT NULL AUTO_INCREMENT,
   `username` varchar(80) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `role` int NOT NULL,
+  `role` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
+  `role_granted_by` varchar(80) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `role_granted_at` datetime DEFAULT NULL,
+  `role_reason` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `username` (`username`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -111,7 +114,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'kry','scrypt:32768:8:1$s7knMGdURBQwxnvU$87d33b7d1f51005c875e58f4624fa095aa3c8c72ec8c870e0633b22239b0d80dae3b193b088d9fe86d04a97ff73f23fe293fa0bf0a28431901f328960f5098ad',2);
+INSERT INTO `users` VALUES (1,'kry','scrypt:32768:8:1$s7knMGdURBQwxnvU$87d33b7d1f51005c875e58f4624fa095aa3c8c72ec8c870e0633b22239b0d80dae3b193b088d9fe86d04a97ff73f23fe293fa0bf0a28431901f328960f5098ad','gold',NULL,NULL,NULL),(2,'admin','scrypt:32768:8:1$YY79rzFTXBhFsFhh$c82d4fb3a0b49b05a67adea4c173fe1cac76faa98007fedbedc87533dc25b6541730c897c01e6a53dd52f1028d1afa810bc41e3420d3dfe533779f440084b7fb','admin',NULL,NULL,NULL),(3,'test','scrypt:32768:8:1$5Xzf8N4bd9mCaYQD$a269471982d17317cb7ae242e486f5ec94592e5046793e97f22ab1ee7decaf15c7033e8526bcad50acc552a0194e29880e17ace0dd6e7e18dfa67969f068fa7e','gold','admin','2026-09-14 11:08:15','');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
@@ -125,4 +128,4 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-14  1:21:11
+-- Dump completed on 2026-09-14  2:10:05
