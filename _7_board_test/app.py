@@ -9,7 +9,7 @@
 
 실행:  python app.py   →  http://localhost:5000
 """
-from flask import Flask
+from flask import Flask, render_template
 
 from config import Config
 from controllers import all_blueprints
@@ -27,6 +27,14 @@ def create_app(config_class=Config):
   # 컨트롤러(블루프린트) 등록
   for bp in all_blueprints:
     app.register_blueprint(bp)
+
+  @app.route('/gold')
+  def gold_page():
+    return render_template('gold.html')
+
+  @app.route('/admin')
+  def admin_page():
+    return render_template('admin.html')
 
   # 테이블 생성 (models 를 import 한 뒤여야 한다 — controllers 가 이미 import 함)
   with app.app_context():

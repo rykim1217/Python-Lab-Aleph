@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>골드등급 전용 페이지</title><script src="https://cdn.tailwindcss.com"></script></head>
+<body class="bg-gray-50 text-gray-800 min-h-screen">{% include 'partials/_nav.html' %}
+<main class="max-w-4xl mx-auto px-4 py-10"><div id="result" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center"><div class="text-amber-600 text-sm font-bold tracking-widest mb-3">GOLD MEMBER ONLY</div><h1 class="text-3xl font-bold mb-3">🏅 골드등급 전용 페이지</h1><p id="welcome-message" class="text-gray-500">접근 권한을 확인하고 있습니다.</p><span id="grade-badge" class="hidden"></span></div></main>
+<script>
+const token=localStorage.getItem('token'), username=localStorage.getItem('username'), role=localStorage.getItem('role');
+const roleNames={0:'일반등급',1:'골드등급',2:'관리자'};
+function logout(){localStorage.clear();location.href='/';}
+function updateNav(){const n=document.getElementById('auth-nav'); if(!n)return; if(token&&username){n.innerHTML=`<span class="text-sm font-medium text-gray-700">${username} · ${roleNames[Number(role)]||'일반등급'}(${role||0})</span><a href="/" onclick="logout()" class="text-sm text-red-500 hover:underline">로그아웃</a>`;}}
+async function check(){updateNav(); if(!token){deny('로그인이 필요합니다.');return;} const r=await fetch('/api/access/gold',{headers:{Authorization:`Bearer ${token}`}}); const d=await r.json(); if(!r.ok){deny(d.msg||'접근 권한이 없습니다.');return;} const displayName=d.role===2?`${d.username} 관리자님`:`${d.username}님`; document.getElementById('welcome-message').innerText=`${displayName}, 골드 회원 전용 콘텐츠를 이용할 수 있습니다.`; const b=document.getElementById('grade-badge'); b.innerText=`${d.role_name}(${d.role})`; b.className=d.role===2?'mt-5 inline-flex items-center bg-red-50 text-red-600 px-3 py-1.5 rounded-full text-sm font-medium':'mt-5 inline-flex items-center bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-sm font-medium';}
+function deny(msg){document.getElementById('result').innerHTML=`<div class="text-red-600 text-sm font-bold tracking-widest mb-3">ACCESS DENIED</div><h1 class="text-3xl font-bold mb-3">🔒 접근 권한이 없습니다</h1><p class="text-gray-500">${msg}</p>`;}
+check();
+</script></body></html>

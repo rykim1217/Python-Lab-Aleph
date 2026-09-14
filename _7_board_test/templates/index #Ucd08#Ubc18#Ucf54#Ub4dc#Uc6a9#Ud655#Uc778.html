@@ -8,8 +8,19 @@
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
 
-    <!-- Navbar (공통 헤더: 메뉴 링크 + 반응형 햄버거) -->
-    {% include 'partials/_nav.html' %}
+    <!-- Navbar -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold text-indigo-600 cursor-pointer" onclick="resetAndLoad()">✨ 모던 게시판</h1>
+                <!-- 공공데이터 페이지로 이동하는 헤더 링크 추가 -->
+                <a href="/public-posts" class="text-sm font-medium text-emerald-600 hover:underline bg-emerald-50 px-3 py-1.5 rounded-lg transition">부산 테마여행 보기</a>
+            </div>
+            <div id="auth-nav" class="flex items-center space-x-3">
+                <!-- 동적 렌더링 -->
+            </div>
+        </div>
+    </header>
 
     <!-- Main Container -->
     <main class="max-w-4xl mx-auto px-4 py-6 flex-1 w-full">
@@ -81,7 +92,6 @@
         let currentCursor = null;
         let isAuthModeLogin = true;
         let currentUsername = localStorage.getItem('username');
-        let currentRole = localStorage.getItem('role');
         let token = localStorage.getItem('token');
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -94,7 +104,7 @@
             const writeBtn = document.getElementById('write-btn');
             if (token && currentUsername) {
                 nav.innerHTML = `
-                    <span class="text-sm font-medium text-gray-700">${currentUsername} · ${({0:'일반등급',1:'골드등급',2:'관리자'})[Number(currentRole)] || '일반등급'}(${currentRole || 0})</span>
+                    <span class="text-sm font-medium text-gray-700">안녕하세요, <strong class="text-indigo-600">${currentUsername}</strong>님</span>
                     <button onclick="logout()" class="text-sm text-red-500 hover:underline">로그아웃</button>
                 `;
                 writeBtn.classList.remove('hidden');
@@ -200,8 +210,6 @@
                     currentUsername = data.username;
                     localStorage.setItem('token', token);
                     localStorage.setItem('username', currentUsername);
-                    currentRole = data.role;
-                    localStorage.setItem('role', currentRole);
                     updateAuthUI();
                     closeAuthModal();
                     loadPosts(true);
@@ -217,10 +225,8 @@
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('username');
-            localStorage.removeItem('role');
             token = null;
             currentUsername = null;
-            currentRole = null;
             updateAuthUI();
             loadPosts(true);
         }
