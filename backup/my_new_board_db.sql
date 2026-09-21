@@ -21,7 +21,6 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 -- GTID state at the beginning of the backup 
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'ed8a6684-a598-11f1-aef4-ba2d36b1aab5:1-150';
 
 --
 -- Table structure for table `posts`
