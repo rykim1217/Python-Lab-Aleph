@@ -1,10 +1,10 @@
 ﻿<agent_config os="Windows">
   <localfile>
-    <location>D:\KRY\Python-Labs-Aleph\_7_board_test\logs\security.log</location>
+    <location>D:\KRY\Python-Lab-Aleph\_7_board_test\logs\security.log</location>
     <log_format>syslog</log_format>
   </localfile>
 
   <syscheck>
-    <directories realtime="yes" check_all="yes">D:\KRY\Python-Labs-Aleph\_7_board_test\templates</directories>
+    <directories realtime="yes" check_all="yes">D:\KRY\Python-Lab-Aleph\_7_board_test\templates</directories>
   </syscheck>
 </agent_config>
