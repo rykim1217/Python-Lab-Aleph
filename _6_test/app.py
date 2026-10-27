@@ -1,152 +1,152 @@
+from datetime import datetime
 import json
-import csv
-import io
+from flask import Flask, Response, render_template_string
+import pymysql
 import requests
-import mysql.connector
-from flask import Flask, jsonify, render_template_string, Response
 
 app = Flask(__name__)
 
-# MySQL 연결 설정 (admin / 123456 계정 사용 환경)
+# DB 연결 설정 (root / 123456)
 DB_CONFIG = {
-    'host': 'localhost',
-    'port': 3306,
-    'user': 'root',     # 필요시 'admin'으로 변경 가능
-    'password': '123456',
-    'database': 'github_db'
+    "host": "localhost",
+    "user": "root",
+    "password": "123456",
+    "charset": "utf8mb4",
+    "cursorclass": pymysql.cursors.DictCursor,
 }
 
-def get_db_connection():
-    return mysql.connector.connect(**DB_CONFIG)
 
-# 1. GitHub API 호출 및 DB 저장
-@app.route('/fetch-and-save', methods=['GET'])
-def fetch_and_save():
-    res = requests.get("https://api.github.com")
-    data = res.json()
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    query = """
-    INSERT INTO api_logs (current_user_url, authorizations_url, repository_url)
-    VALUES (%s, %s, %s)
-    """
-    values = (
-        data.get('current_user_url'),
-        data.get('authorizations_url'),
-        data.get('repository_url')
-    )
-    
-    cursor.execute(query, values)
+def init_db():
+  """데이터베이스 및 테이블 자동 생성"""
+  conn = pymysql.connect(
+      host=DB_CONFIG["host"], user=DB_CONFIG["user"], password=DB_CONFIG["password"]
+  )
+  try:
+    with conn.cursor() as cursor:
+      cursor.execute("CREATE DATABASE IF NOT EXISTS github_db;")
+      cursor.execute("USE github_db;")
+      cursor.execute("""
+                CREATE TABLE IF NOT EXISTS api_responses (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    current_user_url VARCHAR(255),
+                    authorizations_url VARCHAR(255),
+                    code_search_url VARCHAR(255),
+                    fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
     conn.commit()
-    cursor.close()
+  finally:
     conn.close()
-    
-    return jsonify({
-        "status": "success", 
-        "message": "데이터가 DB에 저장되었습니다!", 
-        "inserted_data": data
-    })
 
-# 2. DB 데이터 웹 화면 조회 (/ 및 /view 둘 다 접속 가능)
-@app.route('/', methods=['GET'])
-@app.route('/view', methods=['GET'])
+
+@app.route("/")
 def index():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM api_logs ORDER BY id DESC")
-    rows = cursor.fetchall()
-    cursor.close()
+  init_db()
+
+  # 1. GitHub API 호출 및 데이터 수집
+  r = requests.get("https://api.github.com")
+  data = r.json()
+
+  # 2. MySQL에 데이터 저장
+  conn = pymysql.connect(
+      host=DB_CONFIG["host"],
+      user=DB_CONFIG["user"],
+      password=DB_CONFIG["password"],
+      database="github_db",
+      charset=DB_CONFIG["charset"],
+      cursorclass=DB_CONFIG["cursorclass"],
+  )
+  try:
+    with conn.cursor() as cursor:
+      sql = """
+                INSERT INTO api_responses (current_user_url, authorizations_url, code_search_url) 
+                VALUES (%s, %s, %s)
+            """
+      cursor.execute(
+          sql,
+          (
+              data.get("current_user_url"),
+              data.get("authorizations_url"),
+              data.get("code_search_url"),
+          ),
+      )
+    conn.commit()
+  finally:
     conn.close()
 
-    html_template = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>GitHub API Logs</title>
-    </head>
-    <body style="font-family: Arial, sans-serif; margin: 40px;">
-        <h2>저장된 GitHub API 응답 데이터</h2>
-        <p style="margin-bottom: 20px;">
-            <a href="/fetch-and-save" target="_blank" style="padding: 8px 12px; background: #007bff; color: white; text-decoration: none; border-radius: 4px;">[1] 새 데이터 수집하기</a> &nbsp;
-            <a href="/export/json" style="padding: 8px 12px; background: #28a745; color: white; text-decoration: none; border-radius: 4px;">[2] JSON 파일 다운로드</a> &nbsp;
-            <a href="/export/csv" style="padding: 8px 12px; background: #ffc107; color: black; text-decoration: none; border-radius: 4px;">[3] CSV 파일 다운로드</a>
-        </p>
-        <table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-            <tr style="background-color: #f2f2f2;">
-                <th>ID</th>
-                <th>Current User URL</th>
-                <th>Authorizations URL</th>
-                <th>Repository URL</th>
-                <th>Created At</th>
-            </tr>
-            {% if rows %}
-                {% for row in rows %}
-                <tr>
-                    <td style="text-align: center;">{{ row.id }}</td>
-                    <td>{{ row.current_user_url }}</td>
-                    <td>{{ row.authorizations_url }}</td>
-                    <td>{{ row.repository_url }}</td>
-                    <td style="text-align: center;">{{ row.created_at }}</td>
-                </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #888;">저장된 데이터가 없습니다. '[1] 새 데이터 수집하기'를 먼저 눌러주세요.</td>
-                </tr>
-            {% endif %}
-        </table>
-    </body>
-    </html>
+  return "데이터가 성공적으로 수집 및 저장되었습니다! <br><a href='/view'>웹으로 보기</a> | <a href='/download'>파일로 다운로드</a>"
+
+
+@app.route("/view")
+def view_data():
+  """저장된 내용을 간단한 웹 화면으로 출력"""
+  conn = pymysql.connect(
+      host=DB_CONFIG["host"],
+      user=DB_CONFIG["user"],
+      password=DB_CONFIG["password"],
+      database="github_db",
+      charset=DB_CONFIG["charset"],
+      cursorclass=DB_CONFIG["cursorclass"],
+  )
+  try:
+    with conn.cursor() as cursor:
+      cursor.execute("SELECT * FROM api_responses ORDER BY id DESC")
+      rows = cursor.fetchall()
+  finally:
+      conn.close()
+
+  html = """
+    <h2>GitHub API 응답 데이터 목록</h2>
+    <table border="1" cellpadding="5" cellspacing="0">
+        <tr>
+            <th>ID</th><th>Current User URL</th><th>Authorizations URL</th><th>Code Search URL</th><th>Fetched At</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.current_user_url }}</td>
+            <td>{{ row.authorizations_url }}</td>
+            <td>{{ row.code_search_url }}</td>
+            <td>{{ row.fetched_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br><a href="/">데이터 새로 수집하기</a>
     """
-    return render_template_string(html_template, rows=rows)
+  return render_template_string(html, rows=rows)
 
-# 3. JSON 파일 출력 (다운로드)
-@app.route('/export/json', methods=['GET'])
-def export_json():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM api_logs")
-    rows = cursor.fetchall()
-    cursor.close()
+
+@app.route("/download")
+def download_file():
+  """저장된 내용을 파일 형식(JSON)으로 출력 및 다운로드"""
+  conn = pymysql.connect(
+      host=DB_CONFIG["host"],
+      user=DB_CONFIG["user"],
+      password=DB_CONFIG["password"],
+      database="github_db",
+      charset=DB_CONFIG["charset"],
+      cursorclass=DB_CONFIG["cursorclass"],
+  )
+  try:
+    with conn.cursor() as cursor:
+      cursor.execute("SELECT * FROM api_responses")
+      rows = cursor.fetchall()
+  finally:
     conn.close()
 
-    for row in rows:
-        row['created_at'] = str(row['created_at'])
+  # datetime 객체 JSON 직렬화 오류 방지 변환
+  for row in rows:
+    if "fetched_at" in row and isinstance(row["fetched_at"], datetime):
+      row["fetched_at"] = row["fetched_at"].strftime("%Y-%m-%d %H:%M:%S")
 
-    return Response(
-        json.dumps(rows, indent=2, ensure_ascii=False),
-        status=200,
-        mimetype='application/json',
-        headers={"Content-Disposition": "attachment;filename=github_api_logs.json"}
-    )
+  json_data = json.dumps(rows, ensure_ascii=False, indent=4)
 
-# 4. CSV 파일 출력 (다운로드)
-@app.route('/export/csv', methods=['GET'])
-def export_csv():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM api_logs")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
+  return Response(
+      json_data,
+      mimetype="application/json",
+      headers={"Content-Disposition": "attachment;filename=github_data.json"},
+  )
 
-    if not rows:
-        return "데이터가 없습니다.", 400
 
-    string_io = io.StringIO()
-    writer = csv.DictWriter(string_io, fieldnames=rows[0].keys())
-    writer.writeheader()
-    writer.writerows(rows)
-
-    return Response(
-        string_io.getvalue(),
-        status=200,
-        mimetype='text/csv',
-        headers={"Content-Disposition": "attachment;filename=github_api_logs.csv"}
-    )
-
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+if __name__ == "__main__":
+  app.run(debug=True, port=5000)

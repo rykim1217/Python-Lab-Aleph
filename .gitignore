@@ -1,3 +1,2 @@
 .env
-myenv/
-_8_rag-lab/ragdb/
+.venv/
